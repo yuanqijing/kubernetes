@@ -99,14 +99,17 @@ const (
 // NewControllerManagerCommand creates a *cobra.Command object with default parameters
 // NewControllerManagerCommand 创建一个 *cobra.Command 对象，使用默认参数
 func NewControllerManagerCommand() *cobra.Command {
-	//
+	// NewKubeControllerManagerOptions 创建一个 KubeControllerManagerOptions 对象
 	s, err := options.NewKubeControllerManagerOptions()
 	if err != nil {
 		klog.Fatalf("unable to initialize command options: %v", err)
 	}
 
+	// cobra.Command 是一个命令行工具，用于创建命令行程序
 	cmd := &cobra.Command{
+		// Use 用于描述命令的用途
 		Use: "kube-controller-manager",
+		// Long 用于描述命令的详细用途
 		Long: `The Kubernetes controller manager is a daemon that embeds
 the core control loops shipped with Kubernetes. In applications of robotics and
 automation, a control loop is a non-terminating loop that regulates the state of
@@ -115,31 +118,40 @@ state of the cluster through the apiserver and makes changes attempting to move 
 current state towards the desired state. Examples of controllers that ship with
 Kubernetes today are the replication controller, endpoints controller, namespace
 controller, and serviceaccounts controller.`,
+		// PersistentPreRunE 在执行命令之前执行
 		PersistentPreRunE: func(*cobra.Command, []string) error {
 			// silence client-go warnings.
 			// kube-controller-manager generically watches APIs (including deprecated ones),
 			// and CI ensures it works properly against matching kube-apiserver versions.
+			// SetDefaultWarningHandler 用于设置默认的警告处理函数
 			restclient.SetDefaultWarningHandler(restclient.NoWarnings{})
 			return nil
 		},
+		// RunE 在执行命令时执行, 其中 cmd 是 *cobra.Command 对象，args 是命令行参数
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// PrintAndExitIfRequested 用于打印并退出
 			verflag.PrintAndExitIfRequested()
 
 			// Activate logging as soon as possible, after that
 			// show flags with the final logging configuration.
+			// logsapi.ValidateAndApply 用于验证并应用日志配置, 参数 s.Logs 是日志配置, DefaultFeatureGate 是默认的特性开关
 			if err := logsapi.ValidateAndApply(s.Logs, utilfeature.DefaultFeatureGate); err != nil {
 				return err
 			}
+			// cliflag.PrintFlags 用于打印命令行参数
 			cliflag.PrintFlags(cmd.Flags())
 
 			c, err := s.Config(KnownControllers(), ControllersDisabledByDefault.List())
+			// s.Config 用于获取配置，其中 KnownControllers() 返回已知的控制器。 ControllersDisabledByDefault.List() 返回默认禁用的控制器
 			if err != nil {
 				return err
 			}
 
 			return Run(c.Complete(), wait.NeverStop)
+			// Run 函数用于运行 kube-controller-manager， 参数 c 是 KubeControllerManagerConfiguration 对象，wait.NeverStop 是一个空的 channel
 		},
 		Args: func(cmd *cobra.Command, args []string) error {
+			// Args 用于验证命令行参数
 			for _, arg := range args {
 				if len(arg) > 0 {
 					return fmt.Errorf("%q does not take any arguments, got %q", cmd.CommandPath(), args)
@@ -150,16 +162,24 @@ controller, and serviceaccounts controller.`,
 	}
 
 	fs := cmd.Flags()
+	// cmd.Flags() 用于获取命令行参数
 	namedFlagSets := s.Flags(KnownControllers(), ControllersDisabledByDefault.List())
+	// s.Flags 用于获取命令行参数，其中 KnownControllers() 返回已知的控制器。 ControllersDisabledByDefault.List() 返回默认禁用的控制器
 	verflag.AddFlags(namedFlagSets.FlagSet("global"))
+	// verflag.AddFlags 用于添加版本参数
 	globalflag.AddGlobalFlags(namedFlagSets.FlagSet("global"), cmd.Name(), logs.SkipLoggingConfigurationFlags())
+	// globalflag.AddGlobalFlags 用于添加全局参数, 参数 namedFlagSets.FlagSet("global") 是命令行参数, cmd.Name() 是命令名称, logs.SkipLoggingConfigurationFlags() 是日志配置参数
 	registerLegacyGlobalFlags(namedFlagSets)
+	// registerLegacyGlobalFlags 用于注册旧的全局参数
 	for _, f := range namedFlagSets.FlagSets {
 		fs.AddFlagSet(f)
+		// fs.AddFlagSet 用于添加命令行参数
 	}
 
 	cols, _, _ := term.TerminalSize(cmd.OutOrStdout())
+	// term.TerminalSize 用于获取终端的大小
 	cliflag.SetUsageAndHelpFunc(cmd, namedFlagSets, cols)
+	// cliflag.SetUsageAndHelpFunc 用于设置命令行参数的使用和帮助信息
 
 	return cmd
 }
