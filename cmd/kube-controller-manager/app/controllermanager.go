@@ -97,7 +97,9 @@ const (
 )
 
 // NewControllerManagerCommand creates a *cobra.Command object with default parameters
+// NewControllerManagerCommand 创建一个 *cobra.Command 对象，使用默认参数
 func NewControllerManagerCommand() *cobra.Command {
+	//
 	s, err := options.NewKubeControllerManagerOptions()
 	if err != nil {
 		klog.Fatalf("unable to initialize command options: %v", err)
